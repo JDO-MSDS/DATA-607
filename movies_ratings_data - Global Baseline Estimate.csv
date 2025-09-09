@@ -1,0 +1,20 @@
+Critic,The Phoenician Scheme,Lilo & Stitch,Friendship,Spider-Man,Inside Out 2,Heretic,User Average,user deviation
+Hayley,5,4,5,5,4,4,4.5,0.29
+Garrett,4,5,4,,5,3,4.2,-0.01
+Finn,3,,4,5,4,,4,-0.21
+Stephen,5,3,,3,,4,3.75,-0.46
+Walter,4,,5,4,5,4,4.4,0.19
+Movie average,4.2,4,4.5,4.25,4.5,3.75,4.21,
+Movie deviation,-0.01,-0.21,0.29,0.04,0.29,-0.46,,
+,,,,,,,,
+User deviation = user average - mean all movies,,,,,,,,
+Movie deviation = Movie average - mean all movies,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+Global Baseline Estimate = Mean Movie Rating + Pitch Perfect 2's rating relative to average + Param's rating relative to average,,,,,,,,
+,,,,,,,,
+"Using the Global Baseline Estimate, we can predict Finn's rating for Heretic.",,,,,,,,
+,,,,,,,,
+,,,,,,,,
+Global Baseline Estimate = Mean All movies + User Deviation + Movie Deviation,,,,,,,,
+Global Baseline Estimate = Mean All movies + Finn's Deviation + Heretic Deviation =,,,,,3.54,,,
