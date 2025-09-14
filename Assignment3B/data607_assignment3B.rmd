@@ -1,0 +1,55 @@
+---
+title: "DATA 607 Assignment 3B"
+author: "Joao De Oliveira"
+date: "2025-09-14"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyquant)
+library(tidyverse)
+library(zoo)
+library(lubridate)
+```
+
+## Overview
+
+This report loads and analyzes daily stock prices from Microsoft, Apple, Nvidia, and Google. The goal is to calculate the year-to-date average for each stock in 2025 and a six-day moving average.
+
+```{r load data}
+# Loading stock prices from Microsoft, Apple, Nvdia, and Google
+stocks <- tq_get(c("MSFT", "AAPL", "NVDA", "GOOGL"),
+                 from = "2020-01-01",
+                 to = Sys.Date(),
+                 get = "stock.prices")
+head(stocks)
+```
+
+## Year-to-date average
+
+```{r year-to-date}
+year_to_date <- stocks %>%
+  filter(year(date) == year(Sys.Date())) %>%
+  group_by(symbol) %>%
+  summarize(year_to_date_average = mean(adjusted, na.rm = TRUE))
+  
+year_to_date
+```
+
+## Six- day moving average for each stock
+
+```{r 6-day-av}
+stocks_ma <- stocks %>%
+  group_by(symbol) %>%
+  arrange(date) %>%
+  mutate(six_days_ma = rollmean(adjusted, k = 6, fill = NA, align = "right")) %>%
+  select(symbol, date, adjusted, six_days_ma)
+
+stocks_ma %>%
+  filter(!is.na(six_days_ma)) %>%
+  tail(20)
+```
+
+## Conclusion
+We can see that all stocks analyzed have been having a stronger recent performance than the year performance, which tells me the stock market is probably in good shape recently.
