@@ -1,0 +1,155 @@
+---
+title: "Data 607 Project 1"
+author: "Joao De Oliveira"
+date: "2025-09-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+This project analyzes the results of a chess tournament with 64 players by transforming raw data extracted from a text file to a structured dataset with the goal of understanding the relationship between player pre-tournament ratings and actual tournament performance. The raw data was spread across multiple lines per player, so I had to parse, clean, and restructure the data before the analysis. The goal was create a dataset with each player's name, state, total points, pre-tournament rating, and average pre-rating of opponents. I also created lookup table to calculate opponent's stats. In order to see all player's performance compared with pre tournament performance, I also created a scatter plot highlighting the top 5 performers. 
+
+
+## Load libraries
+```{r}
+library(readr)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Load the data from my Github
+```{r load-data}
+raw_url <- "https://raw.githubusercontent.com/JDO-MSDS/DATA-607/refs/heads/main/Project%201/chess.txt"
+
+chess <- readr::read_lines(raw_url)
+head(chess, 15)
+```
+
+## Extract the information
+```{r cont-store-data}
+names <- c()
+states <- c()
+points <- c()
+pre_ratings <- c()
+avg_opponent_rantings <- c()
+
+# Collect all players data
+player_data <- list()
+
+for (i in seq(5, length(chess), 3)) {
+  if (i + 1 <= length(chess)) {
+    # player data line
+    player_line <- chess[i]
+    state_line <- chess[i + 1]
+  
+    # split line |
+    player_fields_split <- strsplit(player_line, "\\|")[[1]] |> trimws()
+    state_fields_split <- strsplit(state_line, "\\|")[[1]] |> trimws()
+
+  
+    # fields extraction for player
+    player_num <- as.numeric(player_fields_split[1])
+    name <- player_fields_split[2]  # player name position
+    state <- state_fields_split[1] # state position
+    total_points <- as.numeric(player_fields_split[3])
+ 
+  
+    # points and ratings numeric cleaning - remove everything else
+    rating_match <- stringr::str_match(state_fields_split[2], "R:\\s*(\\d+)")
+    pre_rating <- as.numeric(rating_match[,2])
+  
+    # opponents
+    opponents <- c()
+    for (round in 5:11) {
+      if (round <= length(player_fields_split)) {
+        round_result <- player_fields_split[round]
+        opponent_match <- stringr::str_extract(round_result, "[WLD]\\s*(\\d+)")
+        if (!is.na(opponent_match)) {
+          opponent_num <- as.numeric(stringr::str_extract(opponent_match, "\\d+"))
+          opponents <- c(opponents, opponent_num)
+        }
+      }
+    }
+    
+    # Save player data 
+    player_data[[as.character(player_num)]] <- list(
+      name = name,
+      state = state,
+      points = total_points,
+      pre_rating = pre_rating,
+      opponents = opponents
+    )
+  }
+}
+
+# Calculate avg opponent ratings
+for (player_num in names(player_data)) {
+  player <- player_data[[player_num]]
+  
+  # avg pre rating
+  opponent_ratings <- c()
+  for (opponent_num in player$opponents) {
+    if (as.character(opponent_num) %in% names(player_data)) {
+      opponent_ratings <- c(opponent_ratings, player_data[[as.character(opponent_num)]]$pre_rating)
+    }
+  }
+  
+  avg_opponent_ranting <- if(length(opponent_ratings) > 0) {
+    round(mean(opponent_ratings), 0)
+  } else {
+    NA
+  }
+  
+  # update vectors
+  names <- c(names, player$name)
+  states <- c(states, player$state)
+  points <- c(points, player$points)
+  pre_ratings <- c(pre_ratings, player$pre_rating)
+  avg_opponent_rantings <- c(avg_opponent_rantings, avg_opponent_ranting)
+}
+
+# Create the data frame
+chess_data <- data.frame(
+  Name = names,
+  State = states,
+  Points = points,
+  Pre_Rating = pre_ratings,
+  Avg_Opponent_Ratings = avg_opponent_rantings
+)
+
+# Check
+print(head(chess_data, 30))
+```
+
+## Scatter plot
+```{r plot-top5}
+# top 5 players
+top5 <- chess_data[order(chess_data$Points, decreasing = TRUE), ][1:5, ]
+
+ggplot(chess_data, aes(x = Pre_Rating, y = Points)) +
+  geom_point(aes(color = ifelse(Name %in% top5$Name, "Top 5", "Other")), size = 3, alpha = 0.7) + 
+  scale_color_manual(values = c("Top 5" = "red", "Other" = "darkgreen")) +
+  labs(
+    title = "Chess Tournament: Pre-Rating vs Points",
+    subtitle = "Reds = Top 5 players",
+    x = "Pre-Tournament Rating",
+    y = "Total Points Scored",
+    color = "Player Category"
+  )
+
+```
+
+## Save to csv file
+```{r csv}
+write.csv(chess_data, "chess_tournament_results.csv", row.names = FALSE)
+cat("chess_tournament_results.csv was saved")
+
+```
+
+# Conclusion
+This analysis extracted and processed chess tournament data from a structured text file, creating a comprehensive csv dataset with 64 players. The visualization shows the relationship between pre-tournament ratings and actual performance, with the top 5 performers highlighted in red. For example, we can see that there is one player with a pre tournament rating below 1500 in the top 5 players in this tournament. At the same time, we can see that the player with the best pre tournament rating, was between the top 5 players (actually top 3, since only 3 players scored 6 points).
