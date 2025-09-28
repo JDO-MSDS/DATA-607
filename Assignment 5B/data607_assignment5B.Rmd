@@ -123,23 +123,28 @@ expected_elo <- function(player_a, player_b) 1/(1 + 10^((player_b - player_a) / 
 expected_row <- lapply(names(player_data), function(pnumber) {
   pl <- player_data[[pnumber]]
   player_a <- pl$pre_rating
-  expected_total <- sum(sapply(pl$opponents, function(opp_numb) {
+  
+  values <- sapply(pl$opponents, function(opp_numb) {
     key <- as.character(opp_numb)
     if (key %in% names(player_data)) {
       player_b <- player_data[[key]]$pre_rating
       expected_elo(player_a, player_b)
-    } else NA_real_
-  }), na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    }, simplify = TRUE, USE.NAMES = FALSE)
   
-tibble::tibble(
-  Name = pl$name,
-  State = pl$state,
-  Pre_Rating = player_a,
-  Actual = pl$points,
-  Expected = round(expected_total, 2),
-  Difference = round(pl$points - expected_total, 2)
-)
-
+  values <- as.numeric(values)
+  expected_total <- sum(values, na.rm = TRUE)
+  
+  tibble::tibble(
+    Name = pl$name,
+    State = pl$state,
+    Pre_Rating = player_a,
+    Actual = pl$points,
+    Expected = round(expected_total, 2),
+    Difference = round(pl$points - expected_total, 2)
+  )
 })
 
 df_elo <- dplyr::bind_rows(expected_row)
@@ -150,3 +155,17 @@ under <- df_elo %>% arrange(Difference) %>% slice_head(n = 5)
 over
 under
 ```
+
+#### Summary top 5 over and underperformers 
+```{r}
+results_table <- dplyr::bind_rows(
+  dplyr::mutate(over, Category = "Overperform"),
+  dplyr::mutate(under, Category = "Underperform")
+) %>%
+  dplyr::select(Category, Name, State, Pre_Rating, Actual, Expected, Difference)
+
+print(results_table, row.names = FALSE)
+```
+
+## Conclusion
+This report used to ELO formula to predict the peformance of chess players based on their previous performance and compare with the real performnance in the tournament. We can see that ADITYA BAJAJ clearly overperfomed since that player's expected result was 1.76 and they ended up with a score of 6, way above the expected value. At the same time, players such as LOREN SCHWIEBERT or JARED GE had a much worse performance than expected.
