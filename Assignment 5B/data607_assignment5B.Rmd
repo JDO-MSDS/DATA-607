@@ -1,0 +1,152 @@
+---
+title: "Data 607 Assignment 5B"
+author: "Joao De Oliveira"
+date: "2025-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+This report intends to use the ELO rating system to predict each player's expected points based on previous tournaments performance and compare those predictions with the actual performance. 
+
+
+## Load libraries
+```{r}
+library(readr)
+library(stringr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Load the data from my Github
+```{r load-data}
+raw_url <- "https://raw.githubusercontent.com/JDO-MSDS/DATA-607/refs/heads/main/Project%201/chess.txt"
+
+chess <- readr::read_lines(raw_url)
+head(chess, 15)
+```
+
+## Extract the information
+```{r cont-store-data}
+names_v <- c()
+states_v <- c()
+points_v <- c()
+pre_ratings_v <- c()
+avg_opponent_rantings_v <- c()
+
+# Collect all players data
+player_data <- list()
+
+for (i in seq(5, length(chess), 3)) {
+  if (i + 1 <= length(chess)) {
+    # player data line
+    player_line <- chess[i]
+    state_line <- chess[i + 1]
+  
+    # split line |
+    player_fields_split <- strsplit(player_line, "\\|")[[1]] %>% trimws()
+    state_fields_split <- strsplit(state_line, "\\|")[[1]] %>% trimws()
+
+  
+    # fields extraction for player
+    player_num <- as.numeric(player_fields_split[1])
+    name <- player_fields_split[2]  # player name position
+    state <- state_fields_split[1] # state position
+    total_points <- as.numeric(player_fields_split[3])
+ 
+  
+    # points and ratings numeric cleaning - remove everything else
+    rating_match <- stringr::str_match(state_fields_split[2], "R:\\s*(\\d+)")
+    pre_rating <- as.numeric(rating_match[,2])
+  
+    # opponents
+    opponents <- c()
+    for (round in 5:11) {
+      if (round <= length(player_fields_split)) {
+        round_result <- player_fields_split[round]
+        opponent_match <- stringr::str_extract(round_result, "[WLD]\\s*(\\d+)")
+        if (!is.na(opponent_match)) {
+          opponent_num <- as.numeric(stringr::str_extract(opponent_match, "\\d+"))
+          opponents <- c(opponents, opponent_num)
+        }
+      }
+    }
+    
+    # Save player data 
+    player_data[[as.character(player_num)]] <- list(
+      name = name,
+      state = state,
+      points = total_points,
+      pre_rating = pre_rating,
+      opponents = opponents
+    )
+  }
+}
+
+# Calculate avg opponent ratings
+for (player_num in names(player_data)) {
+  player <- player_data[[player_num]]
+  
+  # avg pre rating
+  opponent_ratings <- c()
+  for (opponent_num in player$opponents) {
+    if (as.character(opponent_num) %in% names(player_data)) {
+      opponent_ratings <- c(opponent_ratings, player_data[[as.character(opponent_num)]]$pre_rating)
+    }
+  }
+  
+  avg_opponent_ranting <- if(length(opponent_ratings) > 0) {
+    round(mean(opponent_ratings), 0)
+  } else {
+    NA
+  }
+  
+  # update vectors
+  names_v <- c(names_v, player$name)
+  states_v <- c(states_v, player$state)
+  points_v <- c(points_v, player$points)
+  pre_ratings_v <- c(pre_ratings_v, player$pre_rating)
+  avg_opponent_rantings_v <- c(avg_opponent_rantings_v, avg_opponent_ranting)
+}
+
+head(player_data, 8)
+```
+
+### ELO calculations
+```{r}
+expected_elo <- function(player_a, player_b) 1/(1 + 10^((player_b - player_a) / 400))
+
+expected_row <- lapply(names(player_data), function(pnumber) {
+  pl <- player_data[[pnumber]]
+  player_a <- pl$pre_rating
+  expected_total <- sum(sapply(pl$opponents, function(opp_numb))) {
+    key <- as.character(opp_numb)
+    if (key %in% names(player_data)) {
+      player_b <- player_data[[key]]$pre_rating
+      elo_expected(player_a, player_b)
+    } else NA_real_
+  }), na.rm = TRUE)
+  
+tibble::tible(
+  Name = pl$name,
+  State = pl$state,
+  Pre_Rating = player_a,
+  Actual = pl$points,
+  Expected = round(exp_total, 2),
+  Difference = round(pl$points - exp_total, 2)
+)
+
+})
+
+df_elo <- dplyr::bind_rows(expected_row)
+
+over <- df_elo %>% arrange(desc(Difference)) %>% slice_head(n = 5)
+under <- df_elo %>% arrange(Difference) %>% slice_head(n = 5)
+
+over
+under
+```
