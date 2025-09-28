@@ -123,21 +123,21 @@ expected_elo <- function(player_a, player_b) 1/(1 + 10^((player_b - player_a) / 
 expected_row <- lapply(names(player_data), function(pnumber) {
   pl <- player_data[[pnumber]]
   player_a <- pl$pre_rating
-  expected_total <- sum(sapply(pl$opponents, function(opp_numb))) {
+  expected_total <- sum(sapply(pl$opponents, function(opp_numb) {
     key <- as.character(opp_numb)
     if (key %in% names(player_data)) {
       player_b <- player_data[[key]]$pre_rating
-      elo_expected(player_a, player_b)
+      expected_elo(player_a, player_b)
     } else NA_real_
   }), na.rm = TRUE)
   
-tibble::tible(
+tibble::tibble(
   Name = pl$name,
   State = pl$state,
   Pre_Rating = player_a,
   Actual = pl$points,
-  Expected = round(exp_total, 2),
-  Difference = round(pl$points - exp_total, 2)
+  Expected = round(expected_total, 2),
+  Difference = round(pl$points - expected_total, 2)
 )
 
 })
