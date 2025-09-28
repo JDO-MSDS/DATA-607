@@ -1,0 +1,87 @@
+---
+title: "data607_assignment5A"
+author: "Joao De Oliveira"
+date: "2025-09-27"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+This report uses the charted airline arrival delays in 5 cities. The provided data was used to create a CSV file with that data. I tidied into a long format and analyzed the data by comparing the percentage of delayed flights per city and among all cities. I created a table and plots to visualize these comparisons.
+
+#### Load Libraries and Data
+```{r}
+library(tidyverse)
+library(readr)
+
+# load data
+raw_url <- "https://raw.githubusercontent.com/JDO-MSDS/DATA-607/refs/heads/main/Assignment5A/arrivals%20-%20Sheet1.csv"
+
+wide_data <- readr::read_csv(raw_url, show_col_types = FALSE)
+wide_data
+```
+
+```{r}
+nm <- names(wide_data)
+stopifnot(length(nm) >= 2)
+
+df <- wide_data %>%
+  setNames(replace(nm, 1:2, c("airline", "status"))) %>%
+  tidyr::fill(airline, .direction = "down") %>%
+  # get rid of the empty row
+  filter(!(is.na(status) & if_all(-c(airline, status), is.na))) %>%
+  mutate(status = tolower(status), 
+         status = ifelse(status %in% c("on time","on-time"), "on_time", status)
+  )
+
+# Reformat to long format
+city_columns <- setdiff(names(df), c("airline","status"))
+long <- df %>%
+  pivot_longer(all_of(city_columns), names_to = "city", values_to = "count") %>%
+  mutate(count = as.numeric(count))
+
+# percentage of delayed flights per city
+per_city <- long %>%
+  group_by(airline, city, status) %>%
+  summarise(count = sum(count, na.rm = TRUE), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = status, values_from = count, values_fill = 0) %>%
+  mutate(
+    total_city = delayed + on_time, 
+    pct_delayed = ifelse(total_city > 0, 100 * delayed / total_city, NA_real_)
+    )
+
+# percentage of total delayed flights
+all_city <- per_city %>%
+  group_by(airline) %>%
+  summarise(
+    delayed = sum(delayed), on_time = sum(on_time),
+    total = delayed + on_time,
+    pct_delayed = 100 * delayed / total,
+    .groups = "drop"
+  )
+
+# tables
+print(per_city %>% select(city, airline, pct_delayed) %>% arrange(city, airline))
+print(all_city %>% select(airline, pct_delayed) %>% arrange(airline))
+```
+
+#### Plots
+```{r}
+ggplot(per_city, aes(x = city, y = pct_delayed, fill = airline)) +
+  geom_col(position = position_dodge(width = 0.7)) +
+  labs(title = "Percentage of Delayed Flights per City", x = "City", y = "% delayed")
+
+ggplot(all_city, aes(airline, pct_delayed, fill = airline)) +
+  geom_col() +
+  labs(title = "Percentage of Delayed Flights", x = "City", y = "% delayed")
+```
+
+
+## Conclusion
+By looking at the plot with the percentage of delayed flights per city, we can see that AM WEST has a higher percentage of delayed flights in every single city. However, the plot representing the percentage of delayed flights in all cities combined shows that ALASKA has an overall higher percentage of delayed flights when compared with AM WEST. This discrepancy comes from the fact that the percentage of combined cities might be impacted by a lot of flights in a single airport that usually has more delayed flights. 
+
