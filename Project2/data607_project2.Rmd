@@ -1,0 +1,340 @@
+---
+title: "Data 607 Project 2"
+author: "Joao De Oliveira"
+date: "2025-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+This report intends to use 3 "wide" datasets and tidy them into long formats before analyzing them. I selected a dataset with all English Premier League results from 2024/2025 season. I analyzed Man City's performance by studying their performance by month and the difference between home and away games performance. The second dataset is a Human Development Index by country that I cleaned and analyzed the changes between 1990 and 2022. Finally, the third dataset is a dataset with Glassdoor jobs posts across the US. After cleaning and formatting it, I found the highest paying companies per city and per city based on Glassdoor job posts.
+
+
+### Load Libraries 
+
+```{r load}
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(stringr)
+library(readr)
+library(purrr)
+```
+
+
+### Load data
+
+```{r}
+premier_league_raw <- readr::read_csv("https://raw.githubusercontent.com/JDO-MSDS/DATA-607/refs/heads/main/Project2/E0%20(1).csv")
+
+premier_league <- premier_league_raw %>%
+  mutate(Date = lubridate::dmy(Date)) %>%
+  arrange(Date)
+
+# glimpse(premier_league)
+```
+
+### Tidy Data with one team game per row
+
+```{r tidy}
+home <- premier_league %>%
+  transmute(
+    date = Date,
+    team = HomeTeam,
+    opponent = AwayTeam,
+    venue = "Home",
+    gf = FTHG, 
+    ga = FTAG,
+    result = case_when(FTR == "H" ~ "W",
+                       FTR == "D" ~ "D",
+                       TRUE ~ "L"),
+    shots = HS, 
+    shots_target = HST,
+    fouls = HF, 
+    corners = HC,
+    yellow = HY,
+    red = HR
+  )
+
+away <- premier_league %>%
+  transmute(
+    date = Date,
+    team = AwayTeam,
+    opponent = HomeTeam,
+    venue = "Away",
+    gf = FTAG, 
+    ga = FTHG,
+    result = case_when(FTR == "A" ~ "W",
+                       FTR == "D" ~ "D",
+                       TRUE ~ "L"),
+    shots = AS, 
+    shots_target = AST,
+    fouls = AF, 
+    corners = AC,
+    yellow = AY,
+    red = AR
+  )
+
+
+# table
+team_long <- bind_rows(home, away) %>%
+  arrange(date)
+
+# save
+readr::write_csv(team_long, "premier_league_long.csv")
+
+glimpse(team_long)
+```
+
+
+### Data Analysis
+
+```{r monthly-analysis}
+team_name <- "Man City"
+
+team_month <- team_long %>%
+  filter(team == team_name) %>%
+  mutate(
+    month = floor_date(date, "month"),
+    points = case_when(result == "W" ~ 3L,
+                       result == "D" ~ 1L,
+                       TRUE ~ 0L),
+    gd = gf - ga
+  ) %>%
+  group_by(month) %>%
+  summarise(
+    matches = n(),
+    pts = sum(points),
+    pts_per_game = mean(points),
+    avg_gd = mean(gd),
+    win_rate = mean(result == "W"),
+    .groups = "drop"
+  )
+
+team_month
+```
+
+
+### Plot of points per game each month
+
+```{r monthly-plot}
+ggplot(team_month, aes(x = month, y = pts_per_game)) +
+  geom_col(fill = "blue") +
+  scale_x_date(date_labels = "%b") +
+  labs(title = "Manchester City Points per Game by Month", x = "Month", y = "Points per Game")
+```
+
+
+### Home vs Away performance comparison
+
+```{r home-away}
+home_away <- team_long %>%
+  filter(team == team_name) %>%
+  mutate(points = case_when(result == "W" ~ 3L,
+                            result == "D" ~ 1L,
+                            TRUE ~ 0L
+                            )) %>%
+  group_by(venue) %>%
+  summarise(
+    matches = n(),
+    ppg = mean(points),
+    avg_gf = mean(gf),
+    avg_ga = mean(ga),
+    win_rate = mean(result == "W"),
+    .groups = "drop"
+  )
+
+
+home_away
+```
+
+### Plot
+```{r plot}
+ggplot(home_away, aes(x = venue, y = ppg, fill = venue)) +
+  geom_col(width = 0.6) +
+  labs(title = "Manchester City Home vs Away", x = "Venue", y = "PPG")
+```
+
+### Conclusion
+By looking at the Points per Game by Month plot, we can see that August and October where top performaning months with only wins (3pts) while September, December, February, and March were clearly the months where Man City underperformed, which can be explained by European competion physical and mental overload. Manchester City had a much stronger performance in home games than in away games, which is not surprising, but the away performance (around 1.5 pts) was clearly below what is expected from a championship contender.
+
+
+## Untidy dataset Human Development Index
+
+The data that I chose is the Human Development Index (HDI) from 1990 to 2022, which can be found in this link: worldhdi: Human Development Index Worldwide 1990-2022 INDEX DATA
+One possible analysis of this dataset would be to explore trends in human development across countries and regions over time. For example, we could examine which countries have experienced the greatest improvements in their HDI from 1990 to 2022, or compare the progress of different regions such as Africa, Asia, and Latin America. 
+
+### Load and tidy data
+```{r load data}
+path <- "https://raw.githubusercontent.com/JDO-MSDS/DATA-607/main/Project2/HDR23-24_Statistical_Annex_HDI_Trends_Table%20-%20HDI%20trends.csv"
+
+hdr_lines <- readr::read_lines(path, n_max = 80)
+skip_lines <- {
+  idx <- which(stringr::str_detect(hdr_lines, "\\bCountry\\b"))[1]
+  if (is.na(idx)) 3 else idx - 1
+}
+
+hdi <- readr::read_csv(path, skip = skip_lines, show_col_types = FALSE)
+
+# Ensure the country column is named 'Country'
+if (!"Country" %in% names(hdi)) {
+  ci <- which(grepl("^\\s*Country\\s*$", names(hdi), ignore.case = TRUE))[1]
+  if (!is.na(ci)) names(hdi)[ci] <- "Country" else if (ncol(hdi) >= 2) names(hdi)[2] <- "Country"
+}
+
+hdi <- hdi %>% filter(!is.na(Country))
+
+year_cols <- names(hdi)[stringr::str_detect(names(hdi), "(19|20)\\d{2}")]
+
+hdi_long <- hdi %>%
+  tidyr::pivot_longer(
+    cols = all_of(year_cols),
+    names_to = "year_col",
+    values_to = "hdi_raw",
+    values_transform = list(hdi_raw = as.character)
+  ) %>%
+  mutate(
+    year = readr::parse_integer(stringr::str_extract(year_col, "(19|20)\\d{2}")),
+    hdi  = suppressWarnings(as.numeric(hdi_raw))
+  ) %>%
+  filter(!is.na(year), dplyr::between(year, 1990, 2022), !is.na(hdi)) %>%
+  group_by(Country, year) %>%
+  summarise(hdi = mean(hdi), .groups = "drop")
+
+```
+
+### Improvement analysis between 1990 and 2022
+
+```{r analysis}
+hdi_1990 <- hdi_long %>% filter(year == 1990) %>% select(Country, hdi_1990 = hdi)
+hdi_2022 <- hdi_long %>% filter(year == 2022) %>% select(Country, hdi_2022 = hdi)
+
+improve_1990_2022 <- inner_join(hdi_1990, hdi_2022, by = "Country") %>%
+  mutate(delta = hdi_2022 - hdi_1990) %>%
+  arrange(desc(delta))
+
+cat("HDI Improvement 1990 → 2022 (Top 20):\n")
+print(improve_1990_2022 %>% slice_head(n = 20))
+```
+
+
+### Plot of top 6 improvements
+
+```{r plot-top6}
+top_countries <- improve_1990_2022 %>% 
+  slice_head(n = 6) %>% 
+  pull(Country)
+
+hdi_long %>%
+  filter(Country %in% top_countries) %>%
+  ggplot(aes(x = year, y = hdi, color = Country, group = Country)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(breaks = seq(1990, 2022, by = 4)) +
+  labs(
+    title = "HDI trends for top improvers (1990–2022)",
+    x = "Year",
+    y = "HDI (0–1)"
+  )
+```
+
+### Conclusion 2
+HDI seems to have an upward trend across countries. The improvement table highlights a set of countries with especially large gains, being most of them countries that started with low levels of HDI in 1990. A few countries show pauses or small dips, with emphasis in cases like Ukraine where there is a sharp dip around 2014/2015 (Crimea invasion).
+
+
+### Uncleaned Data Science Job Postings on Glassdoor
+This section of the projects intends to tidy the job postings data from Glassdoor and analyze which company pays the highest by city and by state.
+
+```{r load-data3}
+jobs_raw <- readr::read_csv("https://raw.githubusercontent.com/JDO-MSDS/DATA-607/refs/heads/main/Project2/Uncleaned_DS_jobs.csv", show_col_types = FALSE)
+
+clean_company <- function(a) {
+  a %>% str_remove("\\s+\\d+\\.?\\d*$") %>% str_squish()
+}
+
+# parse city and state
+parse_city <- function(a) str_squish(str_extract(a, "^[^,]+"))
+parse_state <- function(a) str_squish(str_replace_na(str_extract(a, "(?<=,)\\s*.*$")))
+
+# parse salary in thousands
+parse_salary_k <- function(txt) {
+  if (is.na(txt) || txt == "-1") return(NA_real_)
+  s <- tolower(txt)
+  is_hourly <- str_detect(s, "hour")
+  nums <- str_extract_all(s, "\\d+")[[1]]
+  if (length(nums) == 0) return(NA_real_)
+  minv <- as.numeric(nums[1])
+  maxv <- as.numeric(ifelse(length(nums) >= 2, nums[2], nums[1]))
+  if (is_hourly) {
+    conv <- 2080/1000  
+    midk <- (minv + maxv)/2 * conv
+  } else {
+    midk <- (minv + maxv)/2  
+  }
+  midk
+}
+
+# jobs
+jobs <- jobs_raw %>%
+  mutate(
+    company      = clean_company(`Company Name`),
+    rating       = suppressWarnings(as.numeric(Rating)),
+    city         = parse_city(Location),
+    state        = parse_state(Location),
+    salary_text  = `Salary Estimate`,
+    avg_salary_k = map_dbl(salary_text, parse_salary_k)  
+  ) %>%
+  filter(!is.na(avg_salary_k) | !is.na(rating))
+
+jobs %>% select(company, city, state, rating, salary_text, avg_salary_k) %>% slice_head(n = 8)
+```
+
+### Highest paying company per city and state
+
+```{r highest-company-city}
+city_company_pay <- jobs %>%
+  filter(!is.na(avg_salary_k), !is.na(city)) %>%
+  group_by(city, company) %>%
+  summarise(mean_salary_k = mean(avg_salary_k, na.rm = TRUE),
+            n_postings = n(), .groups = "drop_last") %>%
+  arrange(desc(mean_salary_k)) %>%
+  ungroup()
+
+# top company per city
+top_by_city <- city_company_pay %>%
+  group_by(city) %>%
+  slice_max(order_by = mean_salary_k, n = 1, with_ties = TRUE) %>%
+  arrange(city, desc(mean_salary_k), desc(n_postings), company) %>%
+  ungroup()
+
+top_by_city %>% arrange(desc(mean_salary_k)) %>% slice_head(n = 20)
+```
+
+
+```{r highest-company-state}
+state_company_pay <- jobs %>%
+  filter(!is.na(avg_salary_k), !is.na(state)) %>%
+  group_by(state, company) %>%
+  summarise(mean_salary_k = mean(avg_salary_k, na.rm =TRUE), n_postings = n(), 
+            .groups = "drop_last") %>%
+  arrange(desc(mean_salary_k)) %>%
+  ungroup()
+
+top_state <- state_company_pay %>%
+  group_by(state) %>%
+  slice_max(order_by = mean_salary_k, n = 1, with_ties = TRUE) %>%
+  arrange(state, desc(mean_salary_k), desc(n_postings), company) %>%
+  ungroup()
+
+top_state %>% arrange(desc(mean_salary_k)) %>% slice_head(n=20)
+```
+
+
+### Conclusion
+We can see that the top highest paying companies per city end up being the highest paying companies in their corresponding states with the curiosity that all of them have an average annual salart of $272K. 
+
+
+
+
