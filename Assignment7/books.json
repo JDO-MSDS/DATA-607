@@ -1,0 +1,23 @@
+[
+    {
+        "title" : "Futebol - Observacao, Analise e Intervencao",
+        "authors": ["Antonio Barbosa", "Rui Resende"],
+        "year": 2022,
+        "publisher" : "Prime Books",
+        "isbn" : "9789896554620"
+    },
+    {
+        "title" : "Mourinho Anatomy of a Winner",
+        "authors": "Patrick Barclay",
+        "year": 2006,
+        "publisher" : "Orion Publishing Group, Limited",
+        "isbn" : "9780752877655"
+    },
+    {
+        "title" : "The Young Soccer Player",
+        "authors": "Gary Lineker",
+        "year": 1994,
+        "publisher" : "Dorling Kindersley Publishers Ltd",
+        "isbn" : "978-0751351651"
+    }
+]
