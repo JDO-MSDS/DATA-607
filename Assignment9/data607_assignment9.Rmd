@@ -1,0 +1,103 @@
+---
+title: "Data 607 Assignment 9"
+author: "Joao De Oliveira"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output: html_document
+---
+
+## Overview
+Use the New York Times Top Stories API to read JSON data and transform it into 
+an R DataFrame, then save it to a CSV next to this Rmd.
+
+```{r setup_chunk, include=FALSE}
+library(httr2)
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(tibble)
+
+input_path <- knitr::current_input()             
+doc_dir    <- if (nzchar(input_path)) dirname(input_path) else getwd()
+knitr::opts_knit$set(root.dir = doc_dir)
+
+Sys.setenv(NYT_API_KEY = "SmHmeRGIfpZg7aNbHQtR1qhF0rmAGpiB")
+
+`%||%` <- function(a, b) if (!is.null(a) && !is.na(a) && length(a) > 0) a else b
+```
+
+### Diagnostics 
+```{r diagnostics_chunk, echo=FALSE}
+cat("API key present:", ifelse(nzchar(Sys.getenv("NYT_API_KEY")), "YES", "NO"), "\n")
+cat("Key length:", nchar(Sys.getenv("NYT_API_KEY")), "\n")
+cat("Document directory (doc_dir):", normalizePath(doc_dir, winslash = "/"), "\n")
+cat("Working directory during knit (getwd):", normalizePath(getwd(), winslash = "/"), "\n")
+```
+
+## Fetch & Transform JSON into DataFrame
+```{r define_function_chunk, echo=TRUE}
+nyt_top_stories <- function(section = "science", api_key = Sys.getenv("NYT_API_KEY")) {
+  api_key <- trimws(api_key)
+  if (!nzchar(api_key)) stop("NYT_API_KEY is empty. Put your key in .Renviron or Sys.setenv().")
+  
+  base_url <- paste0("https://api.nytimes.com/svc/topstories/v2/", section, ".json")
+  
+  req <- httr2::request(base_url) |>
+    httr2::req_url_query(`api-key` = api_key) |>
+    httr2::req_retry(max_tries = 3, backoff = ~ .x * 0.5) |>
+    httr2::req_error(is_error = function(resp) FALSE)
+  
+  resp <- httr2::req_perform(req)
+  status <- httr2::resp_status(resp)
+  
+  if (status == 401) {
+    body <- tryCatch(httr2::resp_body_string(resp), error = function(e) "")
+    stop("HTTP 401 Unauthorized. Check the key (no trailing spaces/newlines) and that the Top Stories API is enabled for your app. ",
+         if (nzchar(body)) paste0("Server said: ", substr(body, 1, 200), "...") else "")
+  }
+  if (status >= 400) stop(paste("HTTP", status, "error from NYT endpoint."))
+  
+  obj <- jsonlite::fromJSON(httr2::resp_body_string(resp), flatten = TRUE)
+  if (is.null(obj$results) || length(obj$results) == 0) stop("No results returned by the API.")
+  
+  articles <- tibble::as_tibble(obj$results)
+  
+  articles |>
+    dplyr::select(
+      section, subsection, title, abstract, byline, published_date, url,
+      des_facet, org_facet, per_facet, geo_facet, multimedia
+    ) |>
+    dplyr::mutate(
+      published_date = as.POSIXct(published_date, tz = "UTC"),
+      des_facet = purrr::map_chr(des_facet, ~ if (is.null(.x)) NA_character_ else paste(.x, collapse = ", ")),
+      org_facet = purrr::map_chr(org_facet, ~ if (is.null(.x)) NA_character_ else paste(.x, collapse = ", ")),
+      per_facet = purrr::map_chr(per_facet, ~ if (is.null(.x)) NA_character_ else paste(.x, collapse = ", ")),
+      geo_facet = purrr::map_chr(geo_facet, ~ if (is.null(.x)) NA_character_ else paste(.x, collapse = ", ")),
+      image_url = purrr::map_chr(multimedia, ~ {
+        if (is.null(.x) || length(.x) == 0) return(NA_character_)
+        idx <- tryCatch(which.max(.x$width), error = function(e) 1L)
+        .x$url[idx] %||% NA_character_
+      })
+    ) |>
+    dplyr::select(-multimedia)
+}
+```
+
+```{r fetch_data_chunk, echo=TRUE}
+section_chosen <- "science"
+top_stories <- nyt_top_stories(section_chosen)
+```
+
+## Preview the Resulting DataFrame
+```{r preview_df_chunk, echo=TRUE}
+glimpse(top_stories)
+head(dplyr::select(top_stories, title, byline, published_date, url))
+```
+
+## Save to CSV (next to this Rmd)
+```{r save_csv_chunk, echo=TRUE}
+csv_path <- file.path(doc_dir, "nyt_top_stories.csv")
+write.csv(top_stories, csv_path, row.names = FALSE)
+cat("Saved CSV to:", normalizePath(csv_path, winslash = "/"), "\n")
+cat("Files in doc_dir now include:", paste(list.files(doc_dir), collapse = ", "), "\n")
+```
