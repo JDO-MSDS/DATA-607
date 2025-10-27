@@ -1,0 +1,160 @@
+---
+title: "Data 607 TidyVerse CREATE assignment"
+author: "Joao De Oliveira @JDO-MSDS"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+## Overview
+ A short, reproducible vignette demonstrating key **tidyverse** verbs such as 
+ select, rename, mutate, filter, arrange, slice_head, group_by, ggplot, write_csv,
+ with the **fivethirtyeight::college_recent_grads** dataset.
+
+
+## 1. Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r libraries}
+library(tidyverse)        
+library(fivethirtyeight)  
+```
+
+## 2. Data and Glimpse
+
+```{r data-glimpse}
+data("college_recent_grads", package = "fivethirtyeight")
+glimpse(college_recent_grads)
+```
+
+**Variables of interest** 
+
+- major_category: Category of the major (e.g., Engineering, Business)
+- median: Median earnings of full-time, year-round workers
+- p25th, p75th: 25th and 75th percentile of earnings
+- sharewomen: Proportion of women in the major
+- unemployment_rate: Unemployment rate among recent grads
+
+## 3. Cleaning & Selecting Columns (dplyr::select and rename)
+
+```{r select-rename}
+grads <- college_recent_grads %>%
+  select(major, major_category, median, p25th, p75th, sharewomen, unemployment_rate) %>%
+  rename(median_earn = median, p25 = p25th, p75 = p75th, share_women = sharewomen)
+
+glimpse(grads)
+```
+
+## 4. Mutate, Case When, and Across
+
+```{r mutate-case-across}
+grads2 <- grads %>%
+  mutate(
+    share_women_pct = 100 * share_women,
+    earn_bucket = case_when(
+      median_earn < 30000 ~ "< 30k",
+      median_earn < 40000 ~ "30–39k",
+      median_earn < 50000 ~ "40–49k",
+      TRUE                ~ "50k+"
+    )
+  ) %>%
+  
+  mutate(across(c(median_earn, p25, p75), ~ round(.x, -3)))
+
+count(grads2, earn_bucket, sort = TRUE)
+```
+
+## 5. Filter, Arrange, and Slice Helpers
+
+```{r filter-arrange-slice}
+# Top 10 majors by median earnings
+top10 <- grads2 %>%
+  arrange(desc(median_earn)) %>%
+  slice_head(n = 10)
+
+top10 %>% select(major, major_category, median_earn, unemployment_rate)
+```
+
+## 6. Wide ↔ Long (tidyr::pivot_longer)
+
+```{r pivot-longer}
+earn_long <- grads2 %>%
+  select(major, major_category, median_earn, p25, p75) %>%
+  pivot_longer(cols = c(median_earn, p25, p75),
+               names_to = "stat",
+               values_to = "earn")
+
+earn_long %>%
+  count(stat)
+```
+
+## 7. Grouped Summaries (dplyr::group_by and summarise)
+
+```{r grouped-summary}
+by_category <- grads2 %>%
+  group_by(major_category) %>%
+  summarise(
+    majors_n = n(),
+    median_earn_avg = mean(median_earn, na.rm = TRUE),
+    share_women_avg = mean(share_women_pct, na.rm = TRUE),
+    unemp_avg = mean(unemployment_rate, na.rm = TRUE)
+  ) %>%
+  arrange(desc(median_earn_avg))
+
+by_category %>%
+  slice_head(n = 8)
+```
+
+## 8. Visualization (ggplot2)
+
+```{r plot-earnings, fig.width=7, fig.height=4}
+grads2 %>%
+  mutate(major_category = fct_lump_n(major_category, n = 10)) %>%
+  ggplot(aes(x = fct_reorder(major_category, median_earn, .fun = median, na.rm = TRUE),
+             y = median_earn)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  geom_jitter(width = 0.15, alpha = 0.2) +
+  coord_flip() +
+  labs(title = "Median Earnings by Major Category (Top 10)",
+       x = "Major Category", y = "Median Earnings (USD)",
+       caption = "Data: fivethirtyeight::college_recent_grads")
+```
+
+
+```{r plot-sharewomen, fig.width=7, fig.height=4}
+# Relationship between share of women and earnings
+grads2 %>%
+  ggplot(aes(x = share_women_pct, y = median_earn, color = major_category)) +
+  geom_point(alpha = 0.6, size = 2) +
+  scale_x_continuous(labels = scales::label_percent(scale = 1)) +
+  labs(title = "Share of Women vs. Median Earnings",
+       x = "Share of Women (%)", y = "Median Earnings (USD)",
+       color = "Category") 
+```
+
+## 9. Readr 
+
+```{r write-read, eval=FALSE}
+# Save a processed CSV
+readr::write_csv(grads2, "college_recent_grads_processed.csv")
+```
+
+```{r session-info}
+sessionInfo()
+```
+
+
+### Conclusion
+This vignette shows how the Tidyverse simplifies data analysis through 
+consistent and readable syntax. Using the college_recent_grads dataset from 
+fivethirtyeight, I explored how functions from dplyr, tidyr, and ggplot2 can 
+transform, summarize, and visualize real-world data efficiently. Each step—from 
+selecting and mutating variables to reshaping and plotting—showed how the 
+Tidyverse brings a clear, logical workflow for data wrangling and exploration. 
+This example highlights how quickly meaningful insights can be derived when 
+powerful tools like the Tidyverse are applied to structured data.

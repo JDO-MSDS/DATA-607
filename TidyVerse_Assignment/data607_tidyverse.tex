@@ -1,0 +1,424 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Data 607 TidyVerse CREATE assignment},
+  pdfauthor={Joao De Oliveira @JDO-MSDS},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Data 607 TidyVerse CREATE assignment}
+\author{Joao De Oliveira @JDO-MSDS}
+\date{October 26, 2025}
+
+\begin{document}
+\maketitle
+
+\subsection{Overview}\label{overview}
+
+A short, reproducible vignette demonstrating key \textbf{tidyverse}
+verbs such as select, rename, mutate, filter, arrange, slice\_head,
+group\_by, ggplot, write\_csv, with the
+\textbf{fivethirtyeight::college\_recent\_grads} dataset.
+
+\subsection{1. Setup}\label{setup}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)        }
+\FunctionTok{library}\NormalTok{(fivethirtyeight)  }
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{2. Data and Glimpse}\label{data-and-glimpse}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{data}\NormalTok{(}\StringTok{"college\_recent\_grads"}\NormalTok{, }\AttributeTok{package =} \StringTok{"fivethirtyeight"}\NormalTok{)}
+\FunctionTok{glimpse}\NormalTok{(college\_recent\_grads)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Rows: 173
+## Columns: 21
+## $ rank                        <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,~
+## $ major_code                  <int> 2419, 2416, 2415, 2417, 2405, 2418, 6202, ~
+## $ major                       <chr> "Petroleum Engineering", "Mining And Miner~
+## $ major_category              <chr> "Engineering", "Engineering", "Engineering~
+## $ total                       <int> 2339, 756, 856, 1258, 32260, 2573, 3777, 1~
+## $ sample_size                 <int> 36, 7, 3, 16, 289, 17, 51, 10, 1029, 631, ~
+## $ men                         <int> 2057, 679, 725, 1123, 21239, 2200, 2110, 8~
+## $ women                       <int> 282, 77, 131, 135, 11021, 373, 1667, 960, ~
+## $ sharewomen                  <dbl> 0.1205643, 0.1018519, 0.1530374, 0.1073132~
+## $ employed                    <int> 1976, 640, 648, 758, 25694, 1857, 2912, 15~
+## $ employed_fulltime           <int> 1849, 556, 558, 1069, 23170, 2038, 2924, 1~
+## $ employed_parttime           <int> 270, 170, 133, 150, 5180, 264, 296, 553, 1~
+## $ employed_fulltime_yearround <int> 1207, 388, 340, 692, 16697, 1449, 2482, 82~
+## $ unemployed                  <int> 37, 85, 16, 40, 1672, 400, 308, 33, 4650, ~
+## $ unemployment_rate           <dbl> 0.018380527, 0.117241379, 0.024096386, 0.0~
+## $ p25th                       <dbl> 95000, 55000, 50000, 43000, 50000, 50000, ~
+## $ median                      <dbl> 110000, 75000, 73000, 70000, 65000, 65000,~
+## $ p75th                       <dbl> 125000, 90000, 105000, 80000, 75000, 10200~
+## $ college_jobs                <int> 1534, 350, 456, 529, 18314, 1142, 1768, 97~
+## $ non_college_jobs            <int> 364, 257, 176, 102, 4440, 657, 314, 500, 1~
+## $ low_wage_jobs               <int> 193, 50, 0, 0, 972, 244, 259, 220, 3253, 3~
+\end{verbatim}
+
+\textbf{Variables of interest}
+
+\begin{itemize}
+\tightlist
+\item
+  major\_category: Category of the major (e.g., Engineering, Business)
+\item
+  median: Median earnings of full-time, year-round workers
+\item
+  p25th, p75th: 25th and 75th percentile of earnings
+\item
+  sharewomen: Proportion of women in the major
+\item
+  unemployment\_rate: Unemployment rate among recent grads
+\end{itemize}
+
+\subsection{3. Cleaning \& Selecting Columns (dplyr::select and
+rename)}\label{cleaning-selecting-columns-dplyrselect-and-rename}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{grads }\OtherTok{\textless{}{-}}\NormalTok{ college\_recent\_grads }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(major, major\_category, median, p25th, p75th, sharewomen, unemployment\_rate) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{rename}\NormalTok{(}\AttributeTok{median\_earn =}\NormalTok{ median, }\AttributeTok{p25 =}\NormalTok{ p25th, }\AttributeTok{p75 =}\NormalTok{ p75th, }\AttributeTok{share\_women =}\NormalTok{ sharewomen)}
+
+\FunctionTok{glimpse}\NormalTok{(grads)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Rows: 173
+## Columns: 7
+## $ major             <chr> "Petroleum Engineering", "Mining And Mineral Enginee~
+## $ major_category    <chr> "Engineering", "Engineering", "Engineering", "Engine~
+## $ median_earn       <dbl> 110000, 75000, 73000, 70000, 65000, 65000, 62000, 62~
+## $ p25               <dbl> 95000, 55000, 50000, 43000, 50000, 50000, 53000, 315~
+## $ p75               <dbl> 125000, 90000, 105000, 80000, 75000, 102000, 72000, ~
+## $ share_women       <dbl> 0.1205643, 0.1018519, 0.1530374, 0.1073132, 0.341630~
+## $ unemployment_rate <dbl> 0.018380527, 0.117241379, 0.024096386, 0.050125313, ~
+\end{verbatim}
+
+\subsection{4. Mutate, Case When, and
+Across}\label{mutate-case-when-and-across}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{grads2 }\OtherTok{\textless{}{-}}\NormalTok{ grads }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{share\_women\_pct =} \DecValTok{100} \SpecialCharTok{*}\NormalTok{ share\_women,}
+    \AttributeTok{earn\_bucket =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{      median\_earn }\SpecialCharTok{\textless{}} \DecValTok{30000} \SpecialCharTok{\textasciitilde{}} \StringTok{"\textless{} 30k"}\NormalTok{,}
+\NormalTok{      median\_earn }\SpecialCharTok{\textless{}} \DecValTok{40000} \SpecialCharTok{\textasciitilde{}} \StringTok{"30–39k"}\NormalTok{,}
+\NormalTok{      median\_earn }\SpecialCharTok{\textless{}} \DecValTok{50000} \SpecialCharTok{\textasciitilde{}} \StringTok{"40–49k"}\NormalTok{,}
+      \ConstantTok{TRUE}                \SpecialCharTok{\textasciitilde{}} \StringTok{"50k+"}
+\NormalTok{    )}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  
+  \FunctionTok{mutate}\NormalTok{(}\FunctionTok{across}\NormalTok{(}\FunctionTok{c}\NormalTok{(median\_earn, p25, p75), }\SpecialCharTok{\textasciitilde{}} \FunctionTok{round}\NormalTok{(.x, }\SpecialCharTok{{-}}\DecValTok{3}\NormalTok{)))}
+
+\FunctionTok{count}\NormalTok{(grads2, earn\_bucket, }\AttributeTok{sort =} \ConstantTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 4 x 2
+##   earn_bucket     n
+##   <chr>       <int>
+## 1 30–39k         84
+## 2 40–49k         40
+## 3 50k+           34
+## 4 < 30k          15
+\end{verbatim}
+
+\subsection{5. Filter, Arrange, and Slice
+Helpers}\label{filter-arrange-and-slice-helpers}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Top 10 majors by median earnings}
+\NormalTok{top10 }\OtherTok{\textless{}{-}}\NormalTok{ grads2 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(median\_earn)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{slice\_head}\NormalTok{(}\AttributeTok{n =} \DecValTok{10}\NormalTok{)}
+
+\NormalTok{top10 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(major, major\_category, median\_earn, unemployment\_rate)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 10 x 4
+##    major                            major_category median_earn unemployment_rate
+##    <chr>                            <chr>                <dbl>             <dbl>
+##  1 Petroleum Engineering            Engineering         110000            0.0184
+##  2 Mining And Mineral Engineering   Engineering          75000            0.117 
+##  3 Metallurgical Engineering        Engineering          73000            0.0241
+##  4 Naval Architecture And Marine E~ Engineering          70000            0.0501
+##  5 Chemical Engineering             Engineering          65000            0.0611
+##  6 Nuclear Engineering              Engineering          65000            0.177 
+##  7 Actuarial Science                Business             62000            0.0957
+##  8 Astronomy And Astrophysics       Physical Scie~       62000            0.0212
+##  9 Mechanical Engineering           Engineering          60000            0.0573
+## 10 Electrical Engineering           Engineering          60000            0.0592
+\end{verbatim}
+
+\subsection{6. Wide ↔ Long
+(tidyr::pivot\_longer)}\label{wide-long-tidyrpivot_longer}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{earn\_long }\OtherTok{\textless{}{-}}\NormalTok{ grads2 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{select}\NormalTok{(major, major\_category, median\_earn, p25, p75) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_longer}\NormalTok{(}\AttributeTok{cols =} \FunctionTok{c}\NormalTok{(median\_earn, p25, p75),}
+               \AttributeTok{names\_to =} \StringTok{"stat"}\NormalTok{,}
+               \AttributeTok{values\_to =} \StringTok{"earn"}\NormalTok{)}
+
+\NormalTok{earn\_long }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{count}\NormalTok{(stat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 3 x 2
+##   stat            n
+##   <chr>       <int>
+## 1 median_earn   173
+## 2 p25           173
+## 3 p75           173
+\end{verbatim}
+
+\subsection{7. Grouped Summaries (dplyr::group\_by and
+summarise)}\label{grouped-summaries-dplyrgroup_by-and-summarise}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{by\_category }\OtherTok{\textless{}{-}}\NormalTok{ grads2 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(major\_category) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}
+    \AttributeTok{majors\_n =} \FunctionTok{n}\NormalTok{(),}
+    \AttributeTok{median\_earn\_avg =} \FunctionTok{mean}\NormalTok{(median\_earn, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{share\_women\_avg =} \FunctionTok{mean}\NormalTok{(share\_women\_pct, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{unemp\_avg =} \FunctionTok{mean}\NormalTok{(unemployment\_rate, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{arrange}\NormalTok{(}\FunctionTok{desc}\NormalTok{(median\_earn\_avg))}
+
+\NormalTok{by\_category }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{slice\_head}\NormalTok{(}\AttributeTok{n =} \DecValTok{8}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 8 x 5
+##   major_category              majors_n median_earn_avg share_women_avg unemp_avg
+##   <chr>                          <int>           <dbl>           <dbl>     <dbl>
+## 1 Engineering                       29          57379.            23.9    0.0633
+## 2 Business                          13          43538.            48.3    0.0711
+## 3 Computers & Mathematics           11          42727.            31.2    0.0843
+## 4 Law & Public Policy                5          42200             48.4    0.0908
+## 5 Physical Sciences                 10          41900             50.9    0.0465
+## 6 Social Science                     9          37333.            55.4    0.0957
+## 7 Agriculture & Natural Reso~       10          36900             40.5    0.0563
+## 8 Health                            12          36833.            79.5    0.0659
+\end{verbatim}
+
+\subsection{8. Visualization (ggplot2)}\label{visualization-ggplot2}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{grads2 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{major\_category =} \FunctionTok{fct\_lump\_n}\NormalTok{(major\_category, }\AttributeTok{n =} \DecValTok{10}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =} \FunctionTok{fct\_reorder}\NormalTok{(major\_category, median\_earn, }\AttributeTok{.fun =}\NormalTok{ median, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+             \AttributeTok{y =}\NormalTok{ median\_earn)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{outlier.alpha =} \FloatTok{0.3}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_jitter}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.15}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.2}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{coord\_flip}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Median Earnings by Major Category (Top 10)"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Major Category"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Median Earnings (USD)"}\NormalTok{,}
+       \AttributeTok{caption =} \StringTok{"Data: fivethirtyeight::college\_recent\_grads"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{data607_tidyverse_files/figure-latex/plot-earnings-1.pdf}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Relationship between share of women and earnings}
+\NormalTok{grads2 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ share\_women\_pct, }\AttributeTok{y =}\NormalTok{ median\_earn, }\AttributeTok{color =}\NormalTok{ major\_category)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{, }\AttributeTok{size =} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{scale\_x\_continuous}\NormalTok{(}\AttributeTok{labels =}\NormalTok{ scales}\SpecialCharTok{::}\FunctionTok{label\_percent}\NormalTok{(}\AttributeTok{scale =} \DecValTok{1}\NormalTok{)) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \StringTok{"Share of Women vs. Median Earnings"}\NormalTok{,}
+       \AttributeTok{x =} \StringTok{"Share of Women (\%)"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Median Earnings (USD)"}\NormalTok{,}
+       \AttributeTok{color =} \StringTok{"Category"}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+\pandocbounded{\includegraphics[keepaspectratio]{data607_tidyverse_files/figure-latex/plot-sharewomen-1.pdf}}
+
+\subsection{9. Readr}\label{readr}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Save a processed CSV}
+\NormalTok{readr}\SpecialCharTok{::}\FunctionTok{write\_csv}\NormalTok{(grads2, }\StringTok{"college\_recent\_grads\_processed.csv"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sessionInfo}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## R version 4.5.0 (2025-04-11)
+## Platform: aarch64-apple-darwin20
+## Running under: macOS Sequoia 15.7.1
+## 
+## Matrix products: default
+## BLAS:   /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRblas.0.dylib 
+## LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## time zone: America/New_York
+## tzcode source: internal
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] fivethirtyeight_0.6.2 lubridate_1.9.4       forcats_1.0.0        
+##  [4] stringr_1.5.1         dplyr_1.1.4           purrr_1.0.4          
+##  [7] readr_2.1.5           tidyr_1.3.1           tibble_3.2.1         
+## [10] ggplot2_3.5.2         tidyverse_2.0.0      
+## 
+## loaded via a namespace (and not attached):
+##  [1] gtable_0.3.6       compiler_4.5.0     tidyselect_1.2.1   scales_1.4.0      
+##  [5] yaml_2.3.10        fastmap_1.2.0      R6_2.6.1           labeling_0.4.3    
+##  [9] generics_0.1.3     knitr_1.50         pillar_1.10.2      RColorBrewer_1.1-3
+## [13] tzdb_0.5.0         rlang_1.1.6        utf8_1.2.4         stringi_1.8.7     
+## [17] xfun_0.52          timechange_0.3.0   cli_3.6.5          withr_3.0.2       
+## [21] magrittr_2.0.3     digest_0.6.37      grid_4.5.0         rstudioapi_0.17.1 
+## [25] hms_1.1.3          lifecycle_1.0.4    vctrs_0.6.5        evaluate_1.0.3    
+## [29] glue_1.8.0         farver_2.1.2       rmarkdown_2.29     tools_4.5.0       
+## [33] pkgconfig_2.0.3    htmltools_0.5.8.1
+\end{verbatim}
+
+\subsubsection{Conclusion}\label{conclusion}
+
+This vignette shows how the Tidyverse simplifies data analysis through
+consistent and readable syntax. Using the college\_recent\_grads dataset
+from fivethirtyeight, I explored how functions from dplyr, tidyr, and
+ggplot2 can transform, summarize, and visualize real-world data
+efficiently. Each step---from selecting and mutating variables to
+reshaping and plotting---showed how the Tidyverse brings a clear,
+logical workflow for data wrangling and exploration. This example
+highlights how quickly meaningful insights can be derived when powerful
+tools like the Tidyverse are applied to structured data.
+
+\end{document}
