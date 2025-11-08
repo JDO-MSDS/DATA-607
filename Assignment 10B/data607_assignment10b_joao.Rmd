@@ -1,0 +1,246 @@
+---
+title: "DATA 607 Assignment 10B"
+author: "Joao De Oliveira"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+# Overview
+
+This report explores Nobel Prize data using the public JSON API provided by
+NobelPrize.org. The goal is to practice working with real-world JSON data in R 
+while performing meaningful exploratory analysis. After retrieving and cleaning 
+data I address four key questions: 
+(1) Which countries have produced the most Nobel laureates by birth? 
+(2) Which countries have “lost” the most laureates—those born there but 
+affiliated elsewhere when awarded? 
+(3) Which universities or research institutions most frequently appear as 
+laureate affiliations?
+(4) How has the age of Nobel Prize recipients evolved over time by discipline 
+and decade? Together, these analyses illustrate how JSON APIs can be leveraged 
+to uncover insights into global scientific and cultural trends.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 8,
+  fig.height = 5,
+  dpi = 150
+)
+set.seed(1234)
+
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(ggplot2)
+library(purrr)
+library(forcats)
+library(scales)
+
+base_url <- "https://api.nobelprize.org/2.1"
+
+fetch_all <- function(endpoint, limit = 1000) {
+  offset <- 0
+  out <- list()
+  repeat {
+    url <- sprintf("%s/%s?limit=%d&offset=%d", base_url, endpoint, limit, offset)
+    resp <- httr::GET(url)
+    stop_for_status(resp)
+    dat <- jsonlite::fromJSON(content(resp, as = "text", encoding = "UTF-8"), flatten = TRUE)
+    key <- setdiff(names(dat), c("meta","links"))
+    if (length(key) != 1) stop("Unexpected structure")
+    items <- dat[[key]]
+    df_items <- tryCatch(as.data.frame(items), error = function(e) NULL)
+    if (is.null(df_items) || nrow(df_items) == 0) break
+    out[[length(out) + 1]] <- df_items
+    n_got <- nrow(df_items)
+    total <- if (!is.null(dat$meta$count)) dat$meta$count else NA_integer_
+    offset <- offset + limit
+    if (!is.na(total) && offset >= total) break
+    if (n_got < limit) break
+  }
+  if (length(out) == 0) return(dplyr::tibble())
+  dplyr::bind_rows(out)
+}
+
+laureates_raw <- fetch_all("laureates",   limit = 1000)
+prizes_raw    <- fetch_all("nobelPrizes", limit = 1000)
+```
+
+# Study
+
+```{r tidy-data}
+laureates_id <- laureates_raw %>%
+  transmute(
+    id = id,
+    knownName = coalesce(knownName.en, fullName.en, orgName.en),
+    givenName = givenName.en,
+    familyName = familyName.en,
+    gender = gender,
+    birth_date = suppressWarnings(ymd(birth.date)),
+    birth_country = coalesce(birth.place.country.en, birth.place.countryNow.en),
+    death_date = suppressWarnings(ymd(death.date)),
+    is_organization = if_else(!is.na(orgName.en), TRUE, FALSE)
+  )
+
+
+prizes_per_laureate <- laureates_raw %>%
+  select(id, nobelPrizes) %>%
+  tidyr::unnest(nobelPrizes, keep_empty = TRUE) %>%
+  transmute(
+    id = id,
+    awardYear = suppressWarnings(as.integer(awardYear)),
+    category = category.en,
+    prizeStatus = prizeStatus,
+    prizeAmount = prizeAmount,
+    prizeAmountAdjusted = prizeAmountAdjusted,
+    affiliations = affiliations
+  )
+
+
+affils <- prizes_per_laureate %>%
+  mutate(row_id = dplyr::row_number()) %>%
+  unnest(affiliations, keep_empty = TRUE) %>%
+  transmute(
+    row_id,
+    affiliation_name   = name.en,
+    affiliation_city   = city.en,
+    affiliation_country = coalesce(country.en, countryNow.en)
+  )
+
+
+prizes_per_laureate <- prizes_per_laureate %>%
+  mutate(row_id = dplyr::row_number()) %>%
+  left_join(affils, by = "row_id") %>%
+  select(-row_id)
+
+# Combined table for analysis
+laureate_prizes <- prizes_per_laureate %>%
+  left_join(laureates_id, by = "id")
+```
+
+## Which countries have the most Nobel laureates by birth?
+
+```{r q1}
+q1 <- laureates_id %>%
+  filter(is_organization == FALSE, !is.na(birth_country)) %>%
+  distinct(id, birth_country) %>%
+  count(birth_country, sort = TRUE) %>%
+  slice_head(n = 15) %>%
+  mutate(birth_country = fct_reorder(birth_country, n))
+
+ggplot(q1, aes(n, birth_country)) +
+  geom_col() +
+  labs(
+    title = "Top birth countries of Nobel laureates (persons)",
+    x = "Number of laureates",
+    y = NULL
+  )
+```
+
+## Which countries “lost” the most laureates?
+
+```{r q2}
+person_affil <- laureate_prizes %>%
+  filter(is_organization == FALSE) %>%
+  filter(!is.na(affiliation_country), !is.na(birth_country))
+
+lost_flags <- person_affil %>%
+  mutate(lost = affiliation_country != birth_country) %>%
+  group_by(id, birth_country) %>%
+  summarise(lost_any = any(lost, na.rm = TRUE), .groups = "drop")
+
+q2 <- lost_flags %>%
+  filter(lost_any) %>%
+  count(birth_country, sort = TRUE) %>%
+  slice_head(n = 15) %>%
+  mutate(birth_country = fct_reorder(birth_country, n))
+
+ggplot(q2, aes(n, birth_country)) +
+  geom_col() +
+  labs(
+    title = "Which birth countries 'lost' the most laureates?",
+    subtitle = "Born in one country, awarded while affiliated in another",
+    x = "Number of 'lost' laureates (persons)",
+    y = NULL
+  )
+```
+
+## Which universities (affiliations) appear most often?
+
+```{r q3}
+top_affiliations <- laureate_prizes %>%
+  filter(is_organization == FALSE) %>%
+  filter(!is.na(affiliation_name)) %>%
+  mutate(affiliation_name = str_squish(affiliation_name)) %>%
+  filter(affiliation_name != "", affiliation_name != "—") %>%
+  count(affiliation_name, sort = TRUE) %>%
+  slice_head(n = 20) %>%
+  mutate(affiliation_name = fct_reorder(affiliation_name, n))
+
+ggplot(top_affiliations, aes(n, affiliation_name)) +
+  geom_col() +
+  labs(
+    title = "Most frequent affiliations (universities/institutions)",
+    subtitle = "Based on affiliation recorded for the prize",
+    x = "Count of laureate–prize records",
+    y = NULL
+  )
+```
+
+## How does age at award vary by category and decade?
+
+```{r q4}
+age_df <- laureate_prizes %>%
+  filter(is_organization == FALSE, !is.na(birth_date), !is.na(awardYear)) %>%
+  mutate(
+    award_date = suppressWarnings(ymd(paste0(awardYear, "-06-01"))),
+    age_years = as.numeric(difftime(award_date, birth_date, units = "days")) / 365.25,
+    decade = (awardYear %/% 10) * 10
+  ) %>%
+  filter(is.finite(age_years), age_years > 0, age_years < 120)
+
+summary(age_df$age_years)
+
+age_summary <- age_df %>%
+  group_by(decade, category) %>%
+  summarise(
+    n = n(),
+    median_age = median(age_years, na.rm = TRUE),
+    iqr = IQR(age_years, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(age_summary, aes(decade, median_age, color = category)) +
+  geom_line(linewidth = 1) +
+  geom_point() +
+  labs(
+    title = "Median age at award by category and decade",
+    x = "Decade",
+    y = "Median age (years)"
+  )
+```
+
+# Conclusion
+
+The analysis reveal distinct patterns in the Nobel landscape. Historically, most 
+Nobel laureates were born in a few number of countries countries, reflecting 
+global concentrations of research and education infrastructure and financial 
+capacity. Many laureates received their awards while affiliated with institutions
+outside their birth countries. Prestigious universities such as Harvard, 
+Cambridge, and the University of California system dominate affiliation counts, 
+reinforcing their central role in global research excellence. Finally, the age 
+analysis shows that Nobel recognition often comes later in life, with the median
+age at award steadily increasing across decades in most categories. Overall, 
+this assignment demonstrates how structured API data can be transformed and 
+visualized in R to answer real analytical questions about human achievement and 
+global scientific collaboration.
