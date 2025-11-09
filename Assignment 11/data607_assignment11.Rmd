@@ -1,0 +1,196 @@
+---
+title: "DATA 607 Assignment 11"
+author: "João De Oliveira"
+date: "11-09-2025"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Introduction
+
+Among all global platforms, **Spotify** stands out for the sophistication of its
+recommender systems. Its personalized playlists, such as **Discover Weekly**, **Daily Mixes**, 
+**Top Mixes**, and contextual radio, use large-scale data mining and ML algorithms 
+to surface music that aligns with each listener’s tastes and habits. The success 
+of Spotify depends heavily on the precision and emotional connection of these 
+recommendations.
+
+This report analyzes Spotify’s recommender through three perspectives:
+
+1. Scenario Design analysis (both for users and for Spotify as an organization);  
+2. Reverse-engineering of its likely algorithms and data flows;  
+3. Recommendations for future improvement.
+
+---
+
+## Scenario Design Analysis
+
+Scenario Design asks three guiding questions:
+
+1. Who are the users? 
+2. What are their goals?
+3. How does the system help them achieve those goals?
+
+### 1. Spotify Listeners - Customer Perspective
+
+#### Who are the users?
+
+- Casual listeners who look for and listen to curated playlists.  
+- Subscribers seeking discovery/exploration and personalization.  
+- Music enthusiasts creating complex playlists and following artists.  
+- Podcast listeners looking for consistent recommendations.  
+- New users with minimal listening history (cold-start situation).
+
+#### What are their goals?
+
+- Enjoy music that matches their taste without spending time searching.  
+- Discover new artists similar to their favorites.  
+- Set or maintain a mood (e.g., focus/work, workout, relax).  
+- Know that recommendations are relevant, not random.  
+- Avoid repetition and “playlist fatigue.”  
+- Feel that Spotify "understands me" or “gets me.”
+
+#### How does the system help?
+
+Spotify uses multiple recommendation layers:
+
+- **Collaborative Filtering** – identifies users with overlapping listening 
+patterns and recommends songs those similar listeners like.  
+- **Content-Based Filtering** – analyzes the intrinsic qualities of songs (tempo,
+key, loudness, timbre) and the genre and artist to find acoustically or 
+thematically similar tracks.  
+- **Natural-Language Processing** – analyzes blog posts, reviews, and playlists 
+to map songs in a semantic space.  
+- **Contextual and sequence models** – predict what the listener might want 
+*next* based on listening time, skips, saves, and data about the current session,
+time of day, and device.
+
+Together, these systems create an experience that blends discovery and 
+familiarity — e.g., *Discover Weekly* surfaces 30 new songs each Monday that 
+balance novelty with known preferences.
+
+---
+
+### 2. Spotify - Organizational Perspective
+
+#### Who within Spotify uses the system?
+
+- Recommendation and personalization teams.  
+- Product managers for playlists and UX.  
+- Marketing and growth teams.  
+- Artist relations teams interested in exposure fairness.
+
+#### What are Spotify’s organizational goals?
+
+- Maximize listening time and retention. 
+- Increase subscription conversion.
+- Balance mainstream hits and older classic artists to sustain a broad catalog.  
+- Create habit-forming experiences through predictable, personalized content.  
+- Support artists by driving discovery and exposure.
+
+#### How does the system help Spotify reach those goals?
+
+- Personalized feeds keep users engaged daily.  
+- Recommendations drive playlist plays, reducing skip rates and increasing 
+session time.  
+- Data collected through listening behavior improves models and advertising targeting.  
+- Exposure to older hits boosts artist diversity and strengthens Spotify’s market 
+identity as a discovery platform.
+
+---
+
+## Reverse Engineering Spotify’s Recommender
+
+While Spotify’s precise architecture is proprietary, its research papers, 
+developer talks, and user experience reveal a hybrid system with various stages.
+
+### 1. Data Sources
+
+- User interaction logs (listens, skips, saves, playlist adds, shares).  
+- Audio features from Spotify’s **Echo Nest** analysis API.  
+- Textual features from metadata, lyrics, and external web content.  
+- Social signals - collaborative playlists.  
+- Temporal context (day, time, device).
+
+### 2. Modeling Approach
+
+- **Collaborative Filtering** using implicit feedback matrix factorization.  
+- **Neural Embedding Models** that treat listening sequences like sentences 
+(`word2vec` analogy) — songs frequently played together have similar embeddings.  
+- **Hybrid Ranking Pipeline:** coarse candidate generation → neural ranking → 
+diversity/novelty re-ranking.  
+- **Personalized Playlists:** Discover Weekly blends collaborative filetering 
+candidates with content analysis, using exploration-exploitation balancing.
+
+### 3. Interface Clues and User Experience
+
+- Playlists refresh periodically (*Discover Weekly* each Monday and *Release Radar*
+each Friday), suggesting batch offline training.  
+- Daily Mixes update incrementally — likely real-time re-ranking based on fresh 
+listening logs.  
+- “Made for You” hub uses contextual modeling to organize recommendations by 
+intent: focus, relax, commute, etc. 
+
+---
+
+## Recommendations for Improvement
+
+Even though Spotify’s recommender is world-class, UX and ethical dimensions 
+leave room for innovation.
+
+### 1. Enhance Transparency and User Control
+
+**Problem:** Users often don’t know *why* songs appear in their playlists/recommendations.
+**Proposal:** Add small explanations (“Because you liked Arctic Monkeys and XX”)
+and simple feedback options (“Less like this”).  
+**Benefit:** Increased trust and richer explicit signals for model training.
+ 
+---
+
+### 2. Improve Fairness and Exposure for Emerging Artists
+
+**Problem:** Collaborative filtering reinforces popularity bias.  
+**Proposal:** Use fairness-aware ranking that ensures exposure for new or 
+underrepresented artists with high predicted fit scores.  
+**Benefit:** Healthier and more democratic ecosystem, aligns with Spotify’s 
+artist-support mission.
+
+---
+
+### 3. Strengthen Context-Aware Recommendations
+
+**Problem:** Most recommendations ignore real-time context (location, activity).  
+**Proposal:** Incorporate optional signals (e.g., fitness device, calendar 
+events) to dynamically adjust mood-based playlists.  
+**Benefit:** More relevant “moment mixes” and session-based engagement(mostly for
+the DJ).
+
+---
+
+### 4. Balance Exploration and Exploitation
+
+**Problem:** Users can get stuck in a taste bubble.  
+**Proposal:** Leverage multi-armed bandit methods to allocate a small share of 
+slots to novel but plausible songs.  
+**Benefit:** Sustains long-term interest and keeps the experience fresh.
+
+---
+
+
+## Conclusion
+
+Spotify’s recommendation system is an example of modern data-driven personalization: 
+a hybrid architecture merging collaborative filtering, content analysis, and deep 
+learning embeddings. Through Scenario Design analysis, we see that Spotify 
+simultaneously serves two sets of users: listeners seeking effortless musical 
+discovery (usually free users) and the organization pursuing engagement and 
+retention. By combining massive data with thoughtful UX design, Spotify translates 
+behavior into emotionally resonant recommendations. Future improvements should focus on 
+transparency, contextual relevance, and fairness, ensuring that the 
+system continues to delight listeners while supporting artists and long-term 
+platform health.
+
