@@ -1,0 +1,222 @@
+---
+title: "DATA 607 Project 4"
+author: "João De Oliveira"
+date: "2025-11-13"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+set.seed(1234)
+```
+
+## Overview
+
+In this project, I build a document classification predictive model using R tools
+for text mining: tm for preprocessing and a Naive Bayes classifier from e1071. 
+I will read emails that are already labeled (SpamAssassin corpus) from local 
+folders, clean the text, convert to a TF-IDF weighted matrix, train Naive Bayes,
+evaluate accuracy, precision, and test on a few new example messages. 
+
+
+## Libraries
+
+```{r libraries}
+library(tm)
+library(dplyr)
+library(SnowballC)
+library(e1071)
+library(stringi)
+```
+
+
+```{r paths}
+ham_path  <- "~/Desktop/data/easy_ham_2"
+spam_path <- "~/Desktop/data/spam_2"
+
+stopifnot(dir.exists(ham_path), dir.exists(spam_path))
+```
+
+
+## Data
+
+```{r data}
+ham_corp  <- VCorpus(DirSource(ham_path,  encoding = "UTF-8"))
+spam_corp <- VCorpus(DirSource(spam_path, encoding = "UTF-8"))
+
+# smaller sample to keep things fast
+
+sample_corpus <- function(corp, n_max = 600) {
+n <- length(corp)
+if (n > n_max) corp[sort(sample(seq_len(n), n_max))] else corp
+}
+ham_corp  <- sample_corpus(ham_corp,  600)
+spam_corp <- sample_corpus(spam_corp, 600)
+
+length(ham_corp); length(spam_corp)
+```
+
+
+```{r preprocessing-data}
+clean_corpus <- function(corp) {
+  corp <- tm_map(corp, content_transformer(function(x) {
+    x <- iconv(x, from = "", to = "UTF-8", sub = " ")
+    x <- stri_enc_toutf8(x, is_unknown_8bit = TRUE, validate = TRUE)
+    x <- gsub("[\\x00-\\x1F\\x7F]", " ", x, perl = TRUE)
+    x
+  }))
+  
+  # text cleaning
+  corp <- tm_map(corp, content_transformer(tolower))
+  corp <- tm_map(corp, removeNumbers)
+  corp <- tm_map(corp, removePunctuation)
+  corp <- tm_map(corp, removeWords, stopwords("en"))
+  corp <- tm_map(corp, stemDocument, language = "en")
+  corp <- tm_map(corp, stripWhitespace)
+  corp
+}
+
+
+ham_corp_cln  <- clean_corpus(ham_corp)
+spam_corp_cln <- clean_corpus(spam_corp)
+
+all_corp <- c(ham_corp_cln, spam_corp_cln)
+labels   <- factor(c(rep("ham",  length(ham_corp_cln)),
+rep("spam", length(spam_corp_cln))),
+levels = c("ham","spam"))
+```
+
+
+## Split data into training and testing data (80/20)
+
+```{r plit}
+set.seed(1234)
+idx <- sample(seq_along(all_corp), size = floor(0.8 * length(all_corp)))
+train_corp <- all_corp[idx]
+test_corp  <- all_corp[-idx]
+y_train    <- labels[idx]
+y_test     <- labels[-idx]
+
+length(train_corp); length(test_corp)
+table(y_train); table(y_test)
+```
+
+
+## DTM -> TF-IDF
+
+```{r dtm-tf-idf}
+# train DTM
+dtm_train <- DocumentTermMatrix(train_corp)
+
+# trim very sparse terms
+dtm_train <- removeSparseTerms(dtm_train, 0.99)
+
+# TF-IDF weighting
+dtm_train_tfidf <- weightTfIdf(dtm_train)
+
+# test DTM using the training dict
+dtm_test  <- DocumentTermMatrix(test_corp, control = list(dictionary = Terms(dtm_train)))
+dtm_test_tfidf <- weightTfIdf(dtm_test)
+
+# numeric matrices
+x_train <- as.matrix(dtm_train_tfidf)
+x_test  <- as.matrix(dtm_test_tfidf)
+
+# replace NA/inf with 0
+x_train[!is.finite(x_train)] <- 0
+x_test[!is.finite(x_test)]   <- 0
+
+dim(x_train); dim(x_test)
+```
+
+
+## Naive-Bayes Model
+
+```{r naive-bayes}
+nb_fit <- naiveBayes(x = x_train, y = y_train, laplace = 1)
+glimpse(nb_fit)
+# nb_fit
+```
+
+
+## Evaluation: Accuracy, precision, recall, F1
+
+```{r evaluation}
+pred_class <- predict(nb_fit, x_test)
+tab <- table(Actual = y_test, Pred = pred_class)
+tab
+
+# "spam" is positive
+TP <- tab["spam","spam"]; FP <- tab["ham","spam"]
+FN <- tab["spam","ham"];  TN <- tab["ham","ham"]
+
+accuracy  <- (TP + TN) / sum(tab)
+precision <- ifelse((TP + FP) == 0, NA, TP / (TP + FP))
+recall    <- ifelse((TP + FN) == 0, NA, TP / (TP + FN))
+f1        <- ifelse(is.na(precision) || is.na(recall) || (precision+recall)==0,
+NA, 2 * precision * recall / (precision + recall))
+
+knitr::kable(
+data.frame(Metric = c("Accuracy","Precision","Recall","F1"),
+Value  = round(c(accuracy, precision, recall, f1), 3)),
+caption = "Evaluation metrics on the test dataset."
+)
+```
+
+
+## Prediction on my personal emails
+
+
+```{r prediction}
+new_messages <- c(
+  "Hello Joao, a few days ago I opened an email from my client Amy, now thriving as Director of Payments and Checkout at PlayStation with a high salary. She used an updated resume and strategy to move from frustrated and overworked to a much better role. The email links to her resume and says this is what happens when strategy meets execution.",
+  "We couldn't help ourselves. By popular demand, we are adding Mac and Cheese to our Thanksgiving feast with Colonia Verde flair. Our three-cheese mac with guajillo and aji amarillo is now part of the menu with turkey, stuffing, mashed potatoes, glazed squash, cranberry sauce, and tres leches. Pickups will be available on Wednesday and Thursday in the afternoon and orders close soon.",
+  "YOUR FEEDBACK: Help us shape the future of Amplify Classroom. As part of our community, we value your insights as educators and invite you to complete a short survey about your experience. Your feedback helps us improve our tools for teachers and students, and everyone who completes the survey is entered into a drawing for a $25 gift card.",
+  "Your IRS tax refund is pending acceptance. You must accept within 24 hours using this link: http://bit.ly/sdfsdf"
+)
+
+new_corp <- VCorpus(VectorSource(new_messages))
+new_corp <- clean_corpus(new_corp)
+
+# check what the model actually sees after cleaning to understand misclassification
+cat("---- Cleaned documents ----\n")
+for (i in seq_along(new_corp)) {
+  cat("Doc", i, ":\n")
+  cat(as.character(content(new_corp[[i]])), "\n\n")
+}
+  
+new_dtm   <- DocumentTermMatrix(new_corp, control = list(dictionary = Terms(dtm_train)))
+new_tfidf <- weightTfIdf(new_dtm)
+new_x <- as.matrix(new_tfidf)
+new_x[!is.finite(new_x)] <- 0
+
+nz_terms <- rowSums(new_x != 0)
+nz_terms
+
+new_pred <- predict(nb_fit, new_x, type = "class")
+
+knitr::kable(
+  data.frame(
+    message = new_messages,
+    predicted_class = as.character(new_pred)
+  ),
+  caption = "Predictions for example messages."
+)
+```
+
+
+## Conclusion
+
+This report built a complete spam vs ham classifier in R. After cleaning emails 
+and transforming them into TF-IDF features, I used a Naive Bayes model to achieve
+solid performance on a held-out test set, measured by accuracy, precision, recall,
+and F1. The model also generalized to short, unseen messages. When testing with
+my own emails, the model consistently misclassified them, which I did not expect.
+This might have happened because the vocabulary in the SpamAssassin corpus is 
+outdated and shares very little overlap with modern newsletters, corporate emails,
+and phishing attempts. So, I think that a modern spam filter must be trained on 
+recent, representative data.
