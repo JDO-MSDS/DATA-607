@@ -1,0 +1,35 @@
+---
+title: "DATA 607 Data Science in Context"
+author: "Joao De Oliveira"
+date: "2025-12-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r code}
+library(httr)
+library(jsonlite)
+library(dplyr)
+
+# 1. Call a public API: GitHub issues for ggplot2
+url <- "https://api.github.com/repos/tidyverse/ggplot2/issues?per_page=20"
+
+resp <- GET(url)
+
+# 2. Check that the request worked
+status_code(resp)
+
+# 3. Parse JSON content into a list, then data frame
+issues_raw <- content(resp, as = "text", encoding = "UTF-8")
+issues_list <- fromJSON(issues_raw, flatten = TRUE)
+issues <- as_tibble(issues_list)
+
+# 4. Keep just a few useful columns
+issues_clean <- issues %>%
+  select(number, title, state, user.login, created_at)
+
+issues_clean
+```
